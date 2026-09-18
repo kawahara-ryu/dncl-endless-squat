@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>エンドレス・スクワット地獄 〜天使猫の無限ループ筋トレ〜</title>
+  <meta name="description" content="配列を習っていない高校生向け！共通テスト用プログラム表記（DNCL）で反復処理（for, while, break, 累積和）をマスターするゲーム型演習。">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+<body>
+  <!-- BGMコントロールボタン -->
+  <button id="bgm-toggle-btn" class="bgm-btn" onclick="toggleBgm()">🎵 BGM: ON</button>
+
+  <!-- 物理演算用キャンバス（ダンベル・プロテイン落下用） -->
+  <div id="physics-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none;"></div>
+  
+  <!-- マッスルオーラ（神々しい光レイヤー） -->
+  <div id="divine-light-layer" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:900; pointer-events:none; display:none; background: radial-gradient(circle, rgba(255,230,100,0.85) 0%, rgba(0,0,0,0.7) 100%); mix-blend-mode: screen;"></div>
+
+  <!-- ===== タイトル画面 ===== -->
+  <div class="screen active" id="screen-title">
+    <div class="title-container">
+      <img src="./squat_title.jpg" alt="スクワット天使猫" class="title-image" id="title-img">
+      <div class="title-badge">🔥 反復処理（for / while / break）特化演習 🔥</div>
+      <div class="title-text">ENDLESS SQUAT</div>
+      <div class="title-subtitle">〜 天使猫の無限ループ筋トレ地獄 〜</div>
+      <div class="title-story">
+        🏋️‍♀️ 緊急警報 🏋️‍♀️<br><br>
+        天国の門番・美筋天使猫がジムを占拠！<br>
+        『天国に行きたければ、強靭な大腿四頭筋が必要ニャ！』<br>
+        『for文の回数ノルマを達成するまで終わらないニャ！』<br><br>
+        プログラムの反復処理を正しくデバッグし、<br>
+        無限スクワット地獄から脱出して美ボディを掴み取れ！<br><br>
+        <span style="color:#00ffff; font-weight:bold;">※ 共通テスト用プログラム表記（DNCL）／配列は一切出ません！</span>
+      </div>
+      <button class="start-btn" id="btn-start" onclick="goToDifficulty()">▶ 筋トレ開始（START）</button>
+      <div class="bgm-credit">BGM : 魔王魂</div>
+    </div>
+  </div>
+
+  <!-- ===== 難易度選択画面 ===== -->
+  <div class="screen" id="screen-difficulty">
+    <div class="difficulty-title">🏋️‍♀️ コースを選べ</div>
+    <div class="difficulty-cards">
+      <div class="diff-card beginner" onclick="startGame('beginner')">
+        <div class="emoji">🟢</div>
+        <div class="name">BEGINNER</div>
+        <div class="desc">
+          自重スクワット編<br>
+          基本のfor / while / 複合条件<br>
+          4問 / 制限時間なし<br>
+          筋力HP: ♥♥♥♥♥<br>
+          <span style="color:#00ff99; font-weight:bold;">💡 無料ヒントあり</span>
+        </div>
+      </div>
+      <div class="diff-card intermediate" onclick="startGame('intermediate')">
+        <div class="emoji">🟡</div>
+        <div class="name">INTERMEDIATE</div>
+        <div class="desc">
+          バーベルスクワット編<br>
+          累積和・増分指定・break・並び替え<br>
+          5問 / 1問45秒<br>
+          筋力HP: ♥♥♥♥<br>
+          <span>💡 ヒント (HP-1)</span>
+        </div>
+      </div>
+      <div class="diff-card advanced" onclick="startGame('advanced')">
+        <div class="emoji">🔴</div>
+        <div class="name">ADVANCED</div>
+        <div class="desc">
+          限界突破・筋肥大編<br>
+          合計条件while・階乗・最小n探索<br>
+          5問 / 1問30秒<br>
+          筋力HP: ♥♥♥<br>
+          <span>💡 ヒント (HP-1)</span>
+        </div>
+      </div>
+      <div class="diff-card survival" onclick="startGame('survival')">
+        <div class="emoji">💀</div>
+        <div class="name">SURVIVAL</div>
+        <div class="desc">
+          24時間耐久筋トレ編<br>
+          全問題から無限エンドレス出題<br>
+          タイマーが徐々に短縮<br>
+          筋力HP: ♥♥♥<br>
+          <span>💡 ヒント (HP-1)</span>
+        </div>
+      </div>
+    </div>
+    <button class="retry-btn" onclick="goToTitle()" style="margin-top: 15px;">← タイトルに戻る</button>
+  </div>
+
+  <!-- ===== ゲーム画面 ===== -->
+  <div class="screen" id="screen-game">
+    <!-- HUD -->
+    <div class="game-hud">
+      <div class="hud-item">
+        <span class="hud-label">HP</span>
+        <div class="hp-bar-container">
+          <div class="hp-bar" id="hp-bar" style="width: 100%"></div>
+        </div>
+        <span class="hud-value" id="hp-text">5/5</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">SCORE</span>
+        <span class="hud-value" id="score-text">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">SET</span>
+        <span class="hud-value" id="q-progress">1/4</span>
+      </div>
+      <div class="hud-item" id="timer-area" style="display:none;">
+        <span class="hud-label">LACTATE</span>
+        <span class="timer-display" id="timer-text">45</span>
+      </div>
+      <div class="hud-item item-slot" id="item-slot" style="display:none;" onclick="useItem()">
+        <span class="hud-label">ITEM</span>
+        <span class="item-emoji" id="item-emoji"></span>
+      </div>
+    </div>
+
+    <!-- ゲーム本体 -->
+    <div class="game-body">
+      <div class="question-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <div class="question-number" id="q-number">SET 01</div>
+          <button id="btn-hint" class="hint-btn" onclick="openHintModal()">💡 筋トレ助言</button>
+        </div>
+        <div class="question-title" id="q-title">🟢 while文の基本：首都当てループ</div>
+      </div>
+
+      <!-- コードモニター -->
+      <div class="code-monitor">
+        <div class="code-monitor-header">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          <span class="filename">squat_routine.dncl</span>
+        </div>
+        <div class="code-content" id="code-display"></div>
+      </div>
+
+      <!-- 問題文 -->
+      <div class="question-text" id="q-text"></div>
+
+      <!-- 選択肢エリア（4択用） -->
+      <div class="choices-container" id="choices-area"></div>
+
+      <!-- 並び替えエリア -->
+      <div class="sort-container" id="sort-area" style="display:none;"></div>
+
+      <!-- 解説 -->
+      <div class="explanation-box" id="explanation-box">
+        <div class="exp-title">📖 COACH'S ADVICE</div>
+        <div class="exp-text" id="explanation-text"></div>
+        <button class="trace-btn" id="trace-btn" onclick="startTraceReplay()" style="display:none;">▶ トレース表を開く（ステップ追跡）</button>
+        
+        <!-- トレース表コンテナ -->
+        <div class="trace-table-container" id="trace-table-container" style="display:none;">
+          <div class="trace-controls">
+            <button id="trace-prev-btn" onclick="prevTraceStep()">◀ 戻る</button>
+            <span id="trace-step-text">Step: 1 / 5</span>
+            <button id="trace-next-btn" onclick="nextTraceStep()">次へ ▶</button>
+            <button id="trace-close-btn" onclick="clearTrace()">✖ 閉じる</button>
+          </div>
+          <div class="trace-table-wrapper">
+            <table class="trace-table" id="trace-table">
+              <!-- JSで動的に生成 -->
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 次へボタン -->
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">NEXT REP ▶</button>
+    </div>
+
+    <!-- マッスル天使猫マスコットエリア -->
+    <div class="coach-area" id="coach-area">
+      <img src="./angel_cat.png" alt="天使猫コーチ" class="coach-cat" id="coach-cat">
+      <div class="coach-speech" id="coach-speech">ナイスバルク！腕立てよりスクワットだニャ！</div>
+    </div>
+  </div>
+
+  <!-- ===== ヒントモーダル ===== -->
+  <div class="hint-modal-overlay" id="hint-modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="hint-modal">
+      <div class="hint-modal-header">
+        <div class="hint-modal-title">💡 天使猫のフォームチェック（ヒント）</div>
+        <button class="hint-modal-close" onclick="closeHintModal()">✖</button>
+      </div>
+      <div class="hint-modal-body">
+        <div class="hint-text-box" id="hint-text-box"></div>
+        
+        <div class="hint-trace-preview">
+          <div class="hint-trace-title">🔍 途中経過（1〜3ステップ目のトレース表）</div>
+          <div id="hint-trace-table-container"></div>
+        </div>
+
+        <div class="hint-action-box" id="hint-action-box">
+          <button class="btn-assist" id="btn-eliminate-choice" onclick="eliminateWrongChoice()">✂️ プロテイン補給（不正解の選択肢を1つ除外）</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 結果画面 ===== -->
+  <div class="screen" id="screen-result">
+    <div class="result-container">
+      <img src="./squat_clear.jpg" alt="美筋成仏" class="result-image" id="result-img">
+      <div class="result-title" id="result-title">WORKOUT COMPLETE!</div>
+      <div class="rank-display" id="rank-display">S</div>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="review-section" id="review-section" style="display:none;"></div>
+      
+      <!-- あいことばセクション -->
+      <div class="password-section" id="password-section" style="display:none;">
+        <div class="password-label">
+          🎓 Google Classroomの解答に以下の「あいことば」を入力してください。
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; align-items:center; margin-top:10px;">
+          <div class="password-text" id="password-text" style="margin-top:0; flex-grow:1;"></div>
+          <button class="btn-copy" id="copy-pw-btn" onclick="copyPassword()">📋 コピー</button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; width:100%; margin-top:8px;">
+        <button class="retry-btn btn-retry-wrong" id="btn-retry-wrong" onclick="retryWrongQuestionsOnly()" style="display:none; background:linear-gradient(135deg, #ff2d87, #ffd700); color:#111; font-weight:900; border:none;">🔥 間違えた問題だけ再特訓！</button>
+        <button class="retry-btn" onclick="goToDifficulty()">🔄 コースを選んで再挑戦</button>
+        <button class="retry-btn" onclick="goToTitle()" style="border-color: var(--text-dim); color: var(--text-dim);">← タイトルに戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 復習用トレースモーダル ===== -->
+  <div class="hint-modal-overlay" id="review-trace-overlay" onclick="handleReviewTraceOverlayClick(event)">
+    <div class="hint-modal" style="max-width: 680px;">
+      <div class="hint-modal-header" style="background: rgba(0, 240, 255, 0.15); border-color: var(--primary-cyan);">
+        <div class="hint-modal-title" id="review-trace-title" style="color: var(--primary-cyan);">🔍 トレース表で復習</div>
+        <button class="hint-modal-close" onclick="closeReviewTraceModal()">✖</button>
+      </div>
+      <div class="hint-modal-body">
+        <div class="code-monitor" id="review-code-monitor" style="margin-bottom: 8px;">
+          <div class="code-monitor-header">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span class="filename" id="review-code-filename">review_loop.dncl</span>
+          </div>
+          <div class="code-content" id="review-code-display"></div>
+        </div>
+        <div class="trace-controls">
+          <button id="review-trace-prev-btn" onclick="prevReviewTraceStep()">◀ 戻る</button>
+          <span id="review-trace-step-text" style="color: var(--primary-gold); font-family: var(--font-code); font-weight: bold;">Step: 1 / 1</span>
+          <button id="review-trace-next-btn" onclick="nextReviewTraceStep()">次へ ▶</button>
+        </div>
+        <div class="trace-table-wrapper" style="max-height: 220px;">
+          <table class="trace-table" id="review-trace-table"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ゲームオーバーオーバーレイ -->
+  <div class="gameover-overlay" id="gameover-overlay">
+    <div class="gameover-text">MUSCLE FAILURE</div>
+    <div class="gameover-sub">筋肉痛で立ち上がれない…乳酸が限界突破したニャ！</div>
+    <div class="gameover-sub" id="gameover-hint" style="color: #ffaa33; font-size: 0.95rem;"></div>
+    <button class="retry-btn" onclick="retryFromGameover()">🔄 プロテインを飲んでリトライ</button>
+    <button class="retry-btn" onclick="goToDifficultyFromGameover()" style="border-color: var(--text-dim); color: var(--text-dim);">← コース選択に戻る</button>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
